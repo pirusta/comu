@@ -1,0 +1,262 @@
+{% load static %}
+<!doctype html>
+<html>
+<head>
+	<meta charset='utf-8'>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script type="text/javascript" src="{% static 'front/words.js' %}"></script>
+<script type="text/javascript">
+	var normalize = (function() {
+	var from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÇç", 
+		to   = "AAAAAEEEEIIIIOOOOUUUUaaaaaeeeeiiiioooouuuucc",
+		mapping = {};
+	
+	/* WITH Ñ
+	var from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÑñÇç", 
+		to   = "AAAAAEEEEIIIIOOOOUUUUaaaaaeeeeiiiioooouuuunncc",
+		mapping = {};
+	*/
+	for(var i = 0, j = from.length; i < j; i++ )
+		mapping[ from.charAt( i ) ] = to.charAt( i );
+	
+	return function( str ) {
+		var ret = [];
+		for( var i = 0, j = str.length; i < j; i++ ) {
+			var c = str.charAt( i );
+			if( mapping.hasOwnProperty( str.charAt( i ) ) )
+				ret.push( mapping[ c ] );
+			else
+				ret.push( c );
+		}      
+		return ret.join( '' );
+	}
+	
+	})();
+
+	function sortByFrequencyAndRemoveDuplicates(array) {
+		var frequency = {}, value;
+
+		// compute frequencies of each value
+		for(var i = 0; i < array.length; i++) {
+			value = array[i];
+			if(value in frequency) {
+				frequency[value]++;
+			}
+			else {
+				frequency[value] = 1;
+			}
+		}
+
+		// make array from the frequency object to de-duplicate
+		var uniques = [];
+		for(value in frequency) {
+			uniques.push(value);
+		}
+
+		// sort the uniques array in descending order by frequency
+		function compareFrequency(a, b) {
+			return frequency[b] - frequency[a];
+		}
+
+		return uniques.sort(compareFrequency);
+	}
+
+       
+    var order_dict = {} 
+
+
+	/* CREATE DICTIONARY OF LETTERS IN WORD ORDER */
+    for (var i=0; i < words.length; i++) {
+
+        var word = words[i];
+
+        for (var c=0; c < word.length; c++) {
+           var order_key = c.toString();
+
+            if (!(order_key in order_dict)) {
+                order_dict[order_key] = [];
+            } 
+
+			letter = normalize(word[c]);
+            order_dict[order_key].push(letter)
+        }
+    }
+
+
+	var ordered_letters = {}
+
+	/* SORT THE LETTERS AND REMOVE DUPLICATES */
+
+    for (var key in order_dict) {
+	  if (order_dict.hasOwnProperty(key)) {
+
+		  if (!(key in ordered_letters)) {
+                ordered_letters[key] = [];
+		  } 
+
+		  ordered_letters[key].push(sortByFrequencyAndRemoveDuplicates(order_dict[key]));
+
+
+	  }
+    }
+
+
+
+	var current_word = "";
+	var current_phrase = "";
+	var current_phrase_display = "";
+	var current_round = 0;
+
+
+	function registerWordButton() {
+		$("button.word").on("click", function() {
+			current_phrase += $(this).text()+" ";
+			current_phrase_display = current_phrase;
+
+			$("#current_phrase").text(current_phrase);
+
+			beginWord();
+		});
+	}
+
+	function registerLetterButton() {
+		$("button.letter").on("click", function() {
+			var clicked_letter = $(this).attr("data");
+			current_word += clicked_letter; 
+			current_round += 1;
+
+			current_phrase_display += clicked_letter;
+			$('#current_phrase').text(current_phrase_display);
+
+			$("#options").empty();
+			$("#possible_words").empty();
+
+			var possible_words = [];
+
+			for (var word of words) {
+				try {
+					if (normalize(word).indexOf(current_word) == 0) {
+
+						possible_words.push(word);
+
+					}
+				} catch(err) {
+					console.log(err);
+				}
+			}
+
+			var possible_letters = [];
+
+			for (var word of possible_words) {
+				try {
+					var letter = normalize(word[current_round]);
+				} catch(err) {
+					console.log(word, err);
+				}
+				possible_letters.push(letter);
+				$("#possible_words").append("<button class='word'>"+word+"</button>");
+
+			}
+
+			registerWordButton();
+
+			console.log(possible_letters);
+			var possible_letters_sorted = sortByFrequencyAndRemoveDuplicates(possible_letters);
+
+			for (var possible_letter of possible_letters_sorted) {
+				if (possible_letter !== undefined && possible_letter.length == 1) {
+					$("#options").append("<button class='letter' data='"+possible_letter+"'>"+possible_letter+"</button>");
+				}
+			}
+			
+			registerLetterButton();
+			
+		});
+	};
+
+	function beginWord() {
+		$("#options").empty();
+		$("#possible_words").empty();
+		
+		current_word = "";
+		current_round = 0;
+
+		for (var letter of ordered_letters[0][0]) {
+			$("#options").append("<button class='letter' data='"+letter+"'>"+letter+"</button>");
+		}	
+
+		registerLetterButton();
+	}
+
+	$(document).ready(function() {
+
+		beginWord();
+
+
+		$("#current_phrase").on("click", function() {
+			if (current_phrase_display.length > 0) {
+				current_phrase_display+=" ";
+				current_phrase = current_phrase_display;
+				beginWord();
+			}
+		})
+
+
+	});
+
+</script>
+
+</head>
+<body>
+	<div id="display">
+		<div id="current_phrase"></div>
+	</div>
+
+	<div id="interaction">
+		<div id="options"></div>
+		<div id="possible_words"></div>
+	</div>
+
+<style>
+	#interaction {
+		display:flex;
+	}
+	
+	#options {
+		flex: 0.8;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+	}
+
+	#options button {
+		width: 2em;
+		height: 2em;
+		font-size: 37px;
+		margin-right: 13px;
+		margin-bottom: 13px;
+		background: olivedrab;
+		border: 2px solid;
+		border-radius: 13px;
+	}
+	#possible_words {
+		flex:0.2;
+		display:flex;
+		flex-direction: column;
+	}
+	#possible_words button {
+		font-size: 26px;
+		margin-bottom: 10px;
+		background: darkseagreen;
+		border: 2px solid;
+		border-radius: 13px;
+	}
+	#display {
+		font-size: 39px;
+    	height: 1.8em;
+	}
+</style>
+
+
+</body>
+</html>
