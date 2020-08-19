@@ -6,10 +6,44 @@
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 	<script type="text/javascript" src="{% static 'front/words.js' %}"></script>
 <script type="text/javascript">
+
+	// TEXT TO SPEECH
+	var synthesis = false; 
+	if ('speechSynthesis' in window) {
+		  synthesis = window.speechSynthesis;
+
+	}
+
+	var voice;
+
+	// TIMEOUT NEEDED SO IT DOES NOT RETURN AN EMPTY LIST 
+	setTimeout( () => {
+		voice = synthesis.getVoices().filter(function(voice) {
+			console.log(voice.lang)
+			return voice.lang === 'es-AR';
+		})[0];
+
+	}, 500);
+
+	function sayPhrase(phrase) {
+	  // Create an utterance object
+	  var utterance = new SpeechSynthesisUtterance(phrase);
+
+	  // Must be setted and adjusted globally 
+	  utterance.voice = voice;
+	  utterance.pitch = 1.5;
+	  utterance.rate = 0.8;
+	  utterance.volume = 0.8;
+
+	  synthesis.speak(utterance);
+	}
+	////
+
 	var normalize = (function() {
 	var from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÇç", 
 		to   = "AAAAAEEEEIIIIOOOOUUUUaaaaaeeeeiiiioooouuuucc",
 		mapping = {};
+
 	
 	/* WITH Ñ
 	var from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÑñÇç", 
@@ -119,6 +153,21 @@
 		});
 	}
 
+	function completeExtraLetters(possible_letters) {
+			// EXTRA LETTERS NOT IN WORDS
+			var extra_letters = []
+			var alphabet = ("abcdefghijklmnñopqrstuvwxyz").split("");
+			for (var alphabet_letter of alphabet) {
+				if (!(possible_letters.includes(alphabet_letter))) {
+					extra_letters.push(alphabet_letter)
+				}
+			}
+	
+			for (var extra_letter of extra_letters) {
+				$("#options").append("<button class='letter extra_letter' data='"+extra_letter+"'>"+extra_letter+"</button>");
+			}		
+	}
+
 	function registerLetterButton() {
 		$("button.letter").on("click", function() {
 			var clicked_letter = $(this).attr("data");
@@ -160,7 +209,6 @@
 
 			registerWordButton();
 
-			console.log(possible_letters);
 			var possible_letters_sorted = sortByFrequencyAndRemoveDuplicates(possible_letters);
 
 			for (var possible_letter of possible_letters_sorted) {
@@ -168,7 +216,10 @@
 					$("#options").append("<button class='letter' data='"+possible_letter+"'>"+possible_letter+"</button>");
 				}
 			}
-			
+
+			completeExtraLetters(possible_letters);
+		
+
 			registerLetterButton();
 			
 		});
@@ -184,6 +235,8 @@
 		for (var letter of ordered_letters[0][0]) {
 			$("#options").append("<button class='letter' data='"+letter+"'>"+letter+"</button>");
 		}	
+
+		completeExtraLetters(ordered_letters[0][0]);
 
 		registerLetterButton();
 	}
@@ -201,6 +254,16 @@
 			}
 		})
 
+		if (synthesis) {
+			$("#say_phrase").on("click", function() {
+				if (current_phrase_display.length > 0) {
+					sayPhrase(current_phrase_display);
+				}
+			});
+		} else {
+			$("#say_phrase").hide();
+		}
+
 
 	});
 
@@ -208,6 +271,7 @@
 
 </head>
 <body>
+	<button id="say_phrase">DECIR</button>
 	<div id="display">
 		<div id="current_phrase"></div>
 	</div>
@@ -224,13 +288,15 @@
 	
 	#options {
 		flex: 0.8;
+			/*
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: space-between;
+			*/
 	}
 
 	#options button {
-		width: 2em;
+		width: 3.16em;
 		height: 2em;
 		font-size: 37px;
 		margin-right: 13px;
@@ -238,6 +304,9 @@
 		background: olivedrab;
 		border: 2px solid;
 		border-radius: 13px;
+	}
+	#options button.extra_letter {
+	    opacity: 0.8;
 	}
 	#possible_words {
 		flex:0.2;
@@ -253,7 +322,7 @@
 	}
 	#display {
 		font-size: 39px;
-    	height: 1.8em;
+		height: 1.8em;
 	}
 </style>
 

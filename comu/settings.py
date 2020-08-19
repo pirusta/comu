@@ -30,6 +30,8 @@ ALLOWED_HOSTS = ['34.223.5.100']
 
 # Application definition
 
+AUTH_USER_MODEL = 'users.User'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'words.apps.WordsConfig',
     'front.apps.FrontConfig',
+    'users.apps.UsersConfig',
     'apirest.apps.ApirestConfig',
     'rest_framework',
 ]
