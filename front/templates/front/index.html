@@ -153,6 +153,113 @@
 		});
 	}
 
+
+	function resetAll() {
+		$("#current_phrase").empty();
+		$("#options .letter-options").empty();
+		$("#possible_words").empty();
+		
+		current_word = "";
+		current_phrase = ""
+		current_round = 0;
+		current_phrase_display = "";
+
+		beginWord();
+	}
+
+
+	function checkLastCharSpace() {
+		return /\s+$/.test(current_phrase_display.substr(-1));
+	}
+
+
+	function deleteLetter() {
+		// SECOND CONDITIONAL PREVENTS DELETING PREVIOUS WORD
+		var isWordBeggining = checkLastCharSpace()
+		if (current_phrase_display.length > 0 && !isWordBeggining ) {
+			if (current_phrase_display.length == 1) {
+				resetAll();	
+			} else {
+				letterAction("del");
+			}
+		}
+	}
+
+	function letterAction(letter) {
+
+		var doDelete = letter == "del"; 
+
+		var clicked_letter = letter;
+
+		if (!doDelete) {
+			current_word += clicked_letter; 
+			current_round += 1;
+			current_phrase_display += clicked_letter;
+		} else {
+			current_word = current_word.slice(0,-1);
+			current_round -= 1;
+			current_phrase_display = current_phrase_display.slice(0,-1); 
+		}
+
+		$('#current_phrase').text(current_phrase_display);
+
+		$("#options .letter-options").empty();
+		$("#possible_words").empty();
+
+		var possible_words = [];
+
+		if (words.indexOf(current_word) == -1 && current_word.length > 1) {
+			possible_words.push(current_word);
+		}
+
+
+		var possible_letters = [];
+	
+		// NEXT TWO FORs SHOULD BE COMBINED IN ONE.
+		for (var word of words) {
+			try {
+				if (normalize(word).indexOf(current_word) == 0) {
+					possible_words.push(word);
+					var letter = normalize(word[current_round]);
+					possible_letters.push(letter);
+
+
+				}
+			} catch(err) {
+				console.log(err);
+			}
+		}
+
+		for (var word of possible_words) {
+			$("#possible_words").append("<button class='word'>"+word+"</button>");
+		}
+
+
+		registerWordButton();
+
+		var possible_letters_sorted = sortByFrequencyAndRemoveDuplicates(possible_letters);
+
+		for (var possible_letter of possible_letters_sorted) {
+			if (possible_letter !== undefined && possible_letter.length == 1) {
+				$("#options .letter-options").append("<button class='letter' data='"+possible_letter+"'>"+possible_letter+"</button>");
+			}
+		}
+
+		completeExtraLetters(possible_letters);
+	
+
+		registerLetterButton();
+			
+	}
+
+	function addExtraButtons() {
+		$("#options .letter-options").append("<button class='letter-action delete'>&laquo</button>");
+
+		$(".delete").on("click", function() {
+			deleteLetter();
+		});
+	}
+
 	function completeExtraLetters(possible_letters) {
 			// EXTRA LETTERS NOT IN WORDS
 			var extra_letters = []
@@ -164,76 +271,29 @@
 			}
 	
 			for (var extra_letter of extra_letters) {
-				$("#options").append("<button class='letter extra_letter' data='"+extra_letter+"'>"+extra_letter+"</button>");
-			}		
+				$("#options .letter-options").append("<button class='letter extra_letter' data='"+extra_letter+"'>"+extra_letter+"</button>");
+			}
+
+			addExtraButtons();
 	}
 
 	function registerLetterButton() {
 		$("button.letter").on("click", function() {
-			var clicked_letter = $(this).attr("data");
-			current_word += clicked_letter; 
-			current_round += 1;
+			var letter = $(this).attr("data");
 
-			current_phrase_display += clicked_letter;
-			$('#current_phrase').text(current_phrase_display);
-
-			$("#options").empty();
-			$("#possible_words").empty();
-
-			var possible_words = [];
-
-			for (var word of words) {
-				try {
-					if (normalize(word).indexOf(current_word) == 0) {
-
-						possible_words.push(word);
-
-					}
-				} catch(err) {
-					console.log(err);
-				}
-			}
-
-			var possible_letters = [];
-
-			for (var word of possible_words) {
-				try {
-					var letter = normalize(word[current_round]);
-				} catch(err) {
-					console.log(word, err);
-				}
-				possible_letters.push(letter);
-				$("#possible_words").append("<button class='word'>"+word+"</button>");
-
-			}
-
-			registerWordButton();
-
-			var possible_letters_sorted = sortByFrequencyAndRemoveDuplicates(possible_letters);
-
-			for (var possible_letter of possible_letters_sorted) {
-				if (possible_letter !== undefined && possible_letter.length == 1) {
-					$("#options").append("<button class='letter' data='"+possible_letter+"'>"+possible_letter+"</button>");
-				}
-			}
-
-			completeExtraLetters(possible_letters);
-		
-
-			registerLetterButton();
-			
+			letterAction(letter);
 		});
 	};
 
 	function beginWord() {
-		$("#options").empty();
+		$("#options .letter-options").empty();
 		$("#possible_words").empty();
 		
 		current_word = "";
 		current_round = 0;
 
 		for (var letter of ordered_letters[0][0]) {
-			$("#options").append("<button class='letter' data='"+letter+"'>"+letter+"</button>");
+			$("#options .letter-options").append("<button class='letter' data='"+letter+"'>"+letter+"</button>");
 		}	
 
 		completeExtraLetters(ordered_letters[0][0]);
@@ -265,29 +325,74 @@
 		}
 
 
+		$("#reset").on("click", function() {
+			resetAll();
+		});
+
 	});
 
 </script>
 
 </head>
 <body>
-	<button id="say_phrase">DECIR</button>
-	<div id="display">
-		<div id="current_phrase"></div>
-	</div>
+	<div id="content">
+		<!--<button id="say_phrase">DECIR</button>-->
 
-	<div id="interaction">
-		<div id="options"></div>
-		<div id="possible_words"></div>
+		<div id="extras">
+			<div class="yes">SI</div>
+			<div class="no">NO</div>
+		</div>
+
+
+		<div id="display">
+			<div id="current_phrase"></div>
+		</div>
+
+		<div id="interaction">
+			<div id="options">
+				<div class="letter-options"></div>
+				<button class="letter-action" id="reset">&#x21bb;</button>
+			</div>
+			<div id="possible_words"></div>
+		</div>
 	</div>
 
 <style>
+	body {
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+
+	    height: 100%;
+	    position: absolute;
+	    width: 100%;
+	    padding: 0;
+	    margin: 0;
+	}
+	#content {
+	    display: flex;
+	    flex-direction: column;
+	    height: 100%;
+	    width: 100%;
+	    max-height: 100%;
+	    max-width:1280px;
+	}
+	#current_phrase {
+	min-height: 2em;
+	padding: 0.2em;
+	}
 	#interaction {
-		display:flex;
+	    display: flex;
+	    /* height: 100%; */
+	    width: 100%;
+	    flex-grow: 1;
+	    max-width: ;
+	    overflow: hidden;
 	}
 	
 	#options {
-		flex: 0.8;
+	    flex: 0.8;
+	    padding:0.5em;
 			/*
 		display: flex;
 		flex-wrap: wrap;
@@ -308,10 +413,15 @@
 	#options button.extra_letter {
 	    opacity: 0.8;
 	}
+	#options .letter-action, .letter-action {
+	   background:cadetblue;
+	}
 	#possible_words {
-		flex:0.2;
-		display:flex;
-		flex-direction: column;
+	    flex:0.2;
+	    display:flex;
+	    flex-direction: column;
+	    overflow-y:scroll;
+	    padding:0.5em;
 	}
 	#possible_words button {
 		font-size: 26px;
@@ -323,6 +433,27 @@
 	#display {
 		font-size: 39px;
 		height: 1.8em;
+	}
+	#extras {
+	    display: flex;
+	    flex-direction: row;
+	    justify-content: space-between;
+	    padding: 0.5em;
+	    font-size: 2.5em;
+	}
+	#extras div {
+	    width: 2em;
+	    background: darkgreen;
+	    text-align: center;
+	    height: 1.5em;
+	    display: flex;
+	    justify-content: center;
+	    align-items: center;
+	    border-radius: 0.2em;
+	    color: white;
+	}
+	#extras div.no {
+	    background:crimson;
 	}
 </style>
 
